@@ -1,5 +1,5 @@
 // app/(auth)/signup.tsx
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useEffect, useState, useRef } from "react";
@@ -54,10 +54,19 @@ export default function SignUpScreen() {
       // Optional: save email for suggestions
       await saveEmail(email);
 
-      // Redirect to create profile screen after signup
-      router.replace("../create-profile");
+      // Redirect to create profile screen after signup, passing email as param
+      router.replace({
+        pathname: "../create-profile",
+        params: { email },
+      });
     } catch (error) {
       console.log("Sign Up failed:", error);
+      const code = (error as any)?.code;
+      if (code === 'auth/network-request-failed' || (error as any)?.message?.toLowerCase?.().includes('network')) {
+        Alert.alert('Network Error', 'Network request failed. Check your internet connection and try again.');
+      } else {
+        Alert.alert('Sign Up Failed', (error as any)?.message || 'An unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }

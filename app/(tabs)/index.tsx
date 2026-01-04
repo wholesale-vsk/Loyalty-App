@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { router } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromCache } from "firebase/firestore";
 import { auth } from "../../firebaseConfig";
 import { db } from "../../lib/firestore";
 import { useTheme } from '../../contexts/ThemeContext';
+
+// ...existing code...
 
 const colorMap: Record<string, string> = {
   blue: '#3B82F6',
@@ -17,6 +19,7 @@ const colorMap: Record<string, string> = {
 
 export default function HomeScreen() {
   const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('All Offers');
   const { color } = useTheme();
 
@@ -67,63 +70,90 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!auth.currentUser) return;
-      const userRef = doc(db, "users", auth.currentUser.uid);
-      const docSnap = await getDoc(userRef);
-      if (docSnap.exists()) {
-        setProfile(docSnap.data());
+      try {
+        if (!auth.currentUser) return;
+        const userRef = doc(db, "users", auth.currentUser.uid);
+        let docSnap = null as any;
+        try {
+          docSnap = await getDoc(userRef);
+        } catch (readErr) {
+          console.warn('getDoc failed, attempting cache fallback', readErr);
+          try {
+            docSnap = await getDocFromCache(userRef);
+          } catch (cacheErr) {
+            console.warn('getDocFromCache also failed', cacheErr);
+            throw readErr;
+          }
+        }
+
+        if (docSnap && docSnap.exists()) {
+          setProfile(docSnap.data());
+        }
+      } catch (e) {
+        console.warn('Failed to fetch profile', e);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchProfile();
   }, []);
 
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <ActivityIndicator size="large" color={colorMap[color] || '#3B82F6'} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="px-6 pt-4 pb-6">
-          <View className="flex-row items-center justify-between mb-6">
-            <View>
-              <Text className="text-sm text-gray-600">Hello,</Text>
-              <Text className="text-2xl font-bold text-gray-900">
-                {profile?.username || "User"}
-              </Text>
-            </View>
-            <TouchableOpacity
-              className="w-10 h-10 bg-primary rounded-full items-center justify-center"
-              onPress={() => router.push('../add-card')}
-            >
-              <Ionicons name="add" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Points Card */}
-          <View
-            className="rounded-2xl p-6 mb-6 shadow-lg"
-            style={{ backgroundColor: colorMap[color] }}
-          >
-            <View className="flex-row items-center justify-between mb-4">
+        {/* Header + Points Card - render only when profile is available */}
+        {profile && (
+          <View className="px-6 pt-4 pb-6">
+            <View className="flex-row items-center justify-between mb-6">
               <View>
-                <Text className="text-white text-sm opacity-80">
-                  {profile?.membershipType || "Chris Member"}
-                </Text>
-                <Text className="text-white text-3xl font-bold mt-1">
-                  {profile ? `${profile.firstName} ${profile.lastName}` : "Jane Doe"}
+                <Text className="text-sm text-gray-600">Hello,</Text>
+                <Text className="text-2xl font-bold text-gray-900">
+                  {profile.username}
                 </Text>
               </View>
-              <View className="w-16 h-16 bg-white rounded-xl items-center justify-center">
-                <Ionicons name="card" size={32} color={colorMap[color]} />
-              </View>
+              <TouchableOpacity
+                className="w-10 h-10 bg-primary rounded-full items-center justify-center"
+                onPress={() => router.push('../add-card')}
+              >
+                <Ionicons name="add" size={24} color="#fff" />
+              </TouchableOpacity>
             </View>
 
-            <View className="border-t border-white/30 pt-4">
-              <Text className="text-white text-sm opacity-80">Available Points</Text>
-              <Text className="text-white text-2xl font-bold mt-1">
-                {profile?.points !== undefined ? profile.points : "21,250 Points"}
-              </Text>
+            <View
+              className="rounded-2xl p-6 mb-6 shadow-lg"
+              style={{ backgroundColor: colorMap[color] }}
+            >
+              <View className="flex-row items-center justify-between mb-4">
+                <View>
+                  <Text className="text-white text-sm opacity-80">
+                    {profile.membershipType}
+                  </Text>
+                  <Text className="text-white text-3xl font-bold mt-1">
+                    {`${profile.firstName} ${profile.lastName}`}
+                  </Text>
+                </View>
+                <View className="w-16 h-16 bg-white rounded-xl items-center justify-center">
+                  <Ionicons name="card" size={32} color={colorMap[color]} />
+                </View>
+              </View>
+
+              <View className="border-t border-white/30 pt-4">
+                <Text className="text-white text-sm opacity-80">Available Points</Text>
+                <Text className="text-white text-2xl font-bold mt-1">
+                  {profile.points}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Tabs */}
         <View className="flex-row px-6 mb-4">

@@ -22,9 +22,9 @@ export default function SettingsScreen() {
 
   const settingsItems = [
     { id: 1, title: 'Edit Profile', icon: 'person-outline', route: 'profile' },
-    { id: 2, title: 'Manage Membership', icon: 'card-outline', route: 'membership' },
-    { id: 3, title: 'Change Password', icon: 'lock-closed-outline', route: 'change-password' },
-    { id: 4, title: 'Payment Methods', icon: 'wallet-outline', route: 'payment-methods' },
+    // { id: 2, title: 'Manage Membership', icon: 'card-outline', route: 'membership' },
+    { id: 2, title: 'Change Password', icon: 'lock-closed-outline', route: 'change-password' },
+    { id: 3, title: 'Payment Methods', icon: 'wallet-outline', route: 'payment-methods' },
   ];
 
   const preferences = [

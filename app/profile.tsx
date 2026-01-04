@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromCache, updateDoc } from "firebase/firestore";
 import { auth } from "../firebaseConfig";
 import { db } from "../lib/firestore";
 
@@ -26,8 +26,20 @@ export default function ProfileScreen() {
     const fetchProfile = async () => {
       if (!auth.currentUser) return;
       const userRef = doc(db, "users", auth.currentUser.uid);
-      const docSnap = await getDoc(userRef);
-      if (docSnap.exists()) {
+      let docSnap: any = null;
+      try {
+        docSnap = await getDoc(userRef);
+      } catch (readErr) {
+        console.warn('getDoc failed, attempting cache fallback', readErr);
+        try {
+          docSnap = await getDocFromCache(userRef);
+        } catch (cacheErr) {
+          console.warn('getDocFromCache failed', cacheErr);
+          return;
+        }
+      }
+
+      if (docSnap && docSnap.exists()) {
         const data = docSnap.data();
         setFirstName(data.firstName || '');
         setLastName(data.lastName || '');

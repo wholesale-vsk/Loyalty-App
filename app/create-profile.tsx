@@ -18,11 +18,14 @@ const colorMap: Record<string, string> = {
 };
 
 export default function CreateProfileScreen() {
+  const { useLocalSearchParams } = require('expo-router');
+  const params = useLocalSearchParams();
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [idNumber, setIdNumber] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(typeof params.email === 'string' ? params.email : "");
   const [contactNumber, setContactNumber] = useState("");
   const [birthday, setBirthday] = useState("");
   const [address, setAddress] = useState("");
@@ -126,7 +129,8 @@ export default function CreateProfileScreen() {
         updatedAt: new Date(),
       });
 
-      router.replace("../(tabs)/index");
+      // Correct navigation to the main tabs (dashboard/home)
+      router.replace("/(tabs)");
     } catch (error) {
       console.log("Failed to save profile:", error);
       Alert.alert("Error", "Failed to save profile. Please try again.");
@@ -137,6 +141,14 @@ export default function CreateProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      {/* Back Button */}
+      <View style={{ paddingTop: 16, paddingLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace("../(auth)/signup")}
+          style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* Step progress */}
         <View className="mb-6">
